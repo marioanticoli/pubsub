@@ -14,12 +14,12 @@ defmodule PubSubTest do
 
     res =
       receive do
-        msg -> msg
+        {_pid, msg} -> msg
       after
         1_000 -> "No message received"
       end
 
-    assert res =~ message
+    assert res == message
   end
 
   test "When message is published before any subscribers are attached, no messages should be received." do
@@ -33,7 +33,7 @@ defmodule PubSubTest do
 
     res =
       receive do
-        msg -> msg
+        {_pid, msg} -> msg
       after
         1_000 -> timeout_msg
       end
@@ -54,7 +54,7 @@ defmodule PubSubTest do
 
     res =
       receive do
-        msg -> msg
+        {_pid, msg} -> msg
       after
         1_000 -> timeout_msg
       end
@@ -74,19 +74,41 @@ defmodule PubSubTest do
 
     res2 =
       receive do
-        msg -> msg
+        r -> r
       after
         1_000 -> "No message received"
       end
 
     res1 =
       receive do
-        msg -> msg
+        r -> r
       after
         1_000 -> "No message received"
       end
 
-    assert res2 =~ inspect(client2)
-    assert res1 =~ inspect(client1)
+    assert res1 == {client1, message}
+    assert res2 == {client2, message}
+  end
+
+  test "Subscribers to wildcard topics should receive all matching messages" do
+    assert 1 == 2
+  end
+
+  describe "Subscribers with wildcard in the middle of the topic should receive matching messages." do
+    test "Single wildcard" do
+      assert 1 == 2
+    end
+
+    test "Multiple widlcards" do
+      assert 1 == 2
+    end
+  end
+
+  test "Subscribing to wildcard # receives all messages" do
+    assert 1 == 2
+  end
+
+  test "Subscribing to wild combination of wildcards." do
+    assert 1 == 2
   end
 end

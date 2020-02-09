@@ -21,7 +21,7 @@ defmodule PubSub.Subscriber do
   defp listen(parent) do
     receive do
       msg ->
-        send(parent, "Process #{inspect(self())} received '#{msg}'")
+        send(parent, {self(), msg})
     end
 
     listen(parent)
