@@ -1,6 +1,10 @@
 defmodule PubSub.Supervisor do
   use Supervisor
 
+  def start(:normal, opts) do
+    start_link(opts)
+  end
+
   def start_link(opts) do
     Supervisor.start_link(__MODULE__, :ok, opts)
   end
