@@ -1,0 +1,26 @@
+defmodule PubSub.Subscriber do
+  def create(topics) do
+    parent = self()
+
+    spawn(fn ->
+      pid = self()
+
+      topics
+      |> Enum.each(fn topic ->
+        PubSub.Server.join_topic(topic, pid)
+      end)
+
+      listen(parent)
+    end)
+  end
+
+  def listen(parent) do
+    receive do
+      msg ->
+        IO.inspect("Process #{inspect(self())} received #{msg}")
+        send(parent, {self(), msg})
+    end
+
+    listen(parent)
+  end
+end
