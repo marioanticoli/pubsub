@@ -14,7 +14,11 @@ defmodule PubSub.Subscriber do
     end)
   end
 
-  def listen(parent) do
+  def list(topic) do
+    PubSub.Server.list_subscribers(topic)
+  end
+
+  defp listen(parent) do
     receive do
       msg ->
         IO.inspect("Process #{inspect(self())} received #{msg}")
