@@ -36,10 +36,27 @@ defmodule PubSub.Server do
 
   def broadcast(topic, msg), do: GenServer.cast(__MODULE__, {:broadcast, topic, msg})
 
-  defp subscribers(s, t) do
-    case s |> Map.get(t) do
-      nil -> []
-      l -> l
+  defp subscribers(state, topic) do
+    if valid_topic?(topic) do
+      [_hd | topic_list] = topic |> String.split("/")
+
+      state
+      |> Map.keys()
+      |> Enum.reduce([], fn t, acc ->
+        nil
+      end)
+    else
+      []
     end
+  end
+
+  defp valid_topic?(topic) do
+    String.last(topic) != "/" &&
+      String.match?(topic, ~r(/[a-zA-Z0-9/])) &&
+      case String.split("#") do
+        [_str] -> true
+        [_str, ""] -> true
+        _ -> false
+      end
   end
 end
