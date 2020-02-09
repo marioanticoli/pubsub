@@ -4,8 +4,8 @@ defmodule PubSubTest do
   alias PubSub.{Publisher, Subscriber}
 
   test "Subscribing to a topic should receive message from that topic." do
-    topic = "test_topic"
-    message = "This is a test"
+    topic = "/temperature"
+    message = "25"
 
     Subscriber.create([topic])
     |> IO.inspect()
@@ -23,8 +23,8 @@ defmodule PubSubTest do
   end
 
   test "When message is published before any subscribers are attached, no messages should be received." do
-    topic = "test_topic"
-    message = "This is a test"
+    topic = "/temperature"
+    message = "25"
     timeout_msg = "No message received"
 
     Publisher.publish(topic, message)
@@ -42,15 +42,12 @@ defmodule PubSubTest do
   end
 
   test "Publishing to different topic receives no messages." do
-    topic1 = "test_topic1"
-    topic2 = "test_topic2"
-    message = "This is a test"
     timeout_msg = "No message received"
 
-    Subscriber.create([topic2])
+    Subscriber.create(["/other"])
     |> IO.inspect()
 
-    Publisher.publish(topic1, message)
+    Publisher.publish("/temperature", "25")
 
     res =
       receive do
@@ -63,21 +60,18 @@ defmodule PubSubTest do
   end
 
   test "Two subscribers for a different topic should receive intended messages." do
-    topic = "test_topic"
-    message = "This is a test"
+    topic1 = "/temperature"
+    message1 = "25"
+    topic2 = "/humidity"
+    message2 = "125"
 
-    client1 = Subscriber.create([topic])
-    client2 = Subscriber.create([topic])
-    Subscriber.list(topic) |> IO.inspect()
+    client1 = Subscriber.create([topic1])
+    client2 = Subscriber.create([topic2])
+    Subscriber.list(topic1) |> IO.inspect()
+    Subscriber.list(topic2) |> IO.inspect()
 
-    Publisher.publish(topic, message)
-
-    res2 =
-      receive do
-        r -> r
-      after
-        1_000 -> "No message received"
-      end
+    Publisher.publish(topic1, message1)
+    Publisher.publish(topic2, message2)
 
     res1 =
       receive do
@@ -86,29 +80,14 @@ defmodule PubSubTest do
         1_000 -> "No message received"
       end
 
-    assert res1 == {client1, message}
-    assert res2 == {client2, message}
-  end
+    res2 =
+      receive do
+        r -> r
+      after
+        1_000 -> "No message received"
+      end
 
-  test "Subscribers to wildcard topics should receive all matching messages" do
-    assert 1 == 2
-  end
-
-  describe "Subscribers with wildcard in the middle of the topic should receive matching messages." do
-    test "Single wildcard" do
-      assert 1 == 2
-    end
-
-    test "Multiple widlcards" do
-      assert 1 == 2
-    end
-  end
-
-  test "Subscribing to wildcard # receives all messages" do
-    assert 1 == 2
-  end
-
-  test "Subscribing to wild combination of wildcards." do
-    assert 1 == 2
+    assert res1 == {client1, message1}
+    assert res2 == {client2, message2}
   end
 end
