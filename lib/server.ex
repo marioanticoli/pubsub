@@ -6,13 +6,17 @@ defmodule PubSub.Server do
   end
 
   def handle_call({:join_topic, topic, pid}, _from, state) do
-    new_list =
-      case subscribers(state, topic) do
-        [] -> [pid]
-        l -> [pid | l] |> Enum.dedup()
-      end
+    if is_valid_topic?(topic) do
+      new_list =
+        case subscribers(state, topic) do
+          [] -> [pid]
+          l -> [pid | l] |> Enum.dedup()
+        end
 
-    {:reply, new_list, state |> Map.put(topic, new_list)}
+      {:reply, new_list, state |> Map.put(topic, new_list)}
+    else
+      {:reply, nil, state}
+    end
   end
 
   def handle_call({:list_subscribers, topic}, _from, state) do
@@ -20,7 +24,7 @@ defmodule PubSub.Server do
   end
 
   def handle_cast({:broadcast, topic, msg}, state) do
-    subscribers(state, topic)
+    subscribers_to_topic(topic, state)
     |> Enum.each(fn s ->
       send(s, msg)
     end)
@@ -37,26 +41,31 @@ defmodule PubSub.Server do
   def broadcast(topic, msg), do: GenServer.cast(__MODULE__, {:broadcast, topic, msg})
 
   defp subscribers(state, topic) do
-    if valid_topic?(topic) do
-      [_hd | topic_list] = topic |> String.split("/")
-
-      state
-      |> Map.keys()
-      |> Enum.reduce([], fn t, acc ->
-        nil
-      end)
-    else
-      []
+    case state |> Map.get(topic) do
+      nil -> []
+      l -> l
     end
   end
 
-  defp valid_topic?(topic) do
-    String.last(topic) != "/" &&
-      String.match?(topic, ~r(/[a-zA-Z0-9/])) &&
-      case String.split("#") do
-        [_str] -> true
-        [_str, ""] -> true
-        _ -> false
-      end
+  defp is_valid_topic?(topic) do
+    r = ~r<^(/[a-zA-Z0-9]+|/\++)*(/#)?$>
+    String.match?(topic, r)
+  end
+
+  defp subscribers_to_topic(topic, state) do
+    state
+    |> Map.keys()
+    |> Enum.filter(fn s ->
+      s
+      |> String.trim_leading("/")
+      |> topic_match?(topic)
+    end)
+    |> Enum.reduce([], fn k, acc ->
+      Map.get(state, k) ++ acc
+    end)
+  end
+
+  defp topic_match?(subscription, topic) do
+    subscription == topic
   end
 end
