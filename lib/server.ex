@@ -65,7 +65,7 @@ defmodule PubSub.Server do
     end)
   end
 
-  def topic_match?(subscription, topic) do
+  defp topic_match?(subscription, topic) do
     ["" | subscription_list] = subscription |> String.split("/")
     ["" | topic_list] = topic |> String.split("/")
 
