@@ -77,13 +77,10 @@ defmodule PubSub.Server do
         false
 
       Enum.member?(subscription_list, "+") ->
-        matching_by_level?(subscription_list, topic_list)
-
-      List.myers_difference(subscription_list, topic_list) |> matching?() ->
-        true
+        matching_levels?(subscription_list, topic_list)
 
       true ->
-        false
+        List.myers_difference(subscription_list, topic_list) |> matching?()
     end
   end
 
@@ -91,8 +88,9 @@ defmodule PubSub.Server do
   defp matching?(eq: _, del: ["#"], ins: _), do: true
   defp matching?(eq: _, del: ["#"]), do: false
   defp matching?(eq: _, del: _), do: false
+  defp matching?(_any), do: false
 
-  defp matching_by_level?(subsc_list, topic_list) do
+  defp matching_levels?(subsc_list, topic_list) do
     if subsc_list |> length == topic_list |> length do
       Enum.zip(subsc_list, topic_list)
       |> Enum.reduce(true, fn {s, t}, acc ->
