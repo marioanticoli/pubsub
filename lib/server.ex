@@ -24,10 +24,12 @@ defmodule PubSub.Server do
   end
 
   def handle_cast({:broadcast, topic, msg}, state) do
-    subscribers_to_topic(topic, state)
-    |> Enum.each(fn s ->
-      send(s, msg)
-    end)
+    if topic |> is_valid_topic?() do
+      subscribers_to_topic(topic, state)
+      |> Enum.each(fn s ->
+        send(s, msg)
+      end)
+    end
 
     {:noreply, state}
   end
@@ -56,16 +58,30 @@ defmodule PubSub.Server do
     state
     |> Map.keys()
     |> Enum.filter(fn s ->
-      s
-      |> String.trim_leading("/")
-      |> topic_match?(topic)
+      s |> topic_match?(topic)
     end)
     |> Enum.reduce([], fn k, acc ->
       Map.get(state, k) ++ acc
     end)
   end
 
-  defp topic_match?(subscription, topic) do
-    subscription == topic
+  def topic_match?(subscription, topic) do
+    diff = String.myers_difference(subscription, topic)
+    diff |> IO.inspect()
+
+    case diff do
+      [eq: _] -> true
+      [eq: _, del: "/#"] -> true
+      [eq: _, del: "#", ins: _] -> true
+      _ -> match_single_level?(subscription |> String.split("/"), topic |> String.split("/"))
+    end
+  end
+
+  defp match_single_level?(subsc_list, topic_list) do
+    cond do
+      subsc_list == topic_list -> true
+      subsc_list |> length != topic_list |> length -> false
+      true -> false
+    end
   end
 end
