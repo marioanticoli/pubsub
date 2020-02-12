@@ -66,22 +66,45 @@ defmodule PubSub.Server do
   end
 
   def topic_match?(subscription, topic) do
-    diff = String.myers_difference(subscription, topic)
-    diff |> IO.inspect()
+    ["" | subscription_list] = subscription |> String.split("/")
+    ["" | topic_list] = topic |> String.split("/")
 
-    case diff do
-      [eq: _] -> true
-      [eq: _, del: "/#"] -> true
-      [eq: _, del: "#", ins: _] -> true
-      _ -> match_single_level?(subscription |> String.split("/"), topic |> String.split("/"))
+    cond do
+      subscription == topic ->
+        true
+
+      !Enum.member?(subscription_list, "#") && topic_list |> length != subscription_list |> length ->
+        false
+
+      Enum.member?(subscription_list, "+") ->
+        matching_by_level?(subscription_list, topic_list)
+
+      List.myers_difference(subscription_list, topic_list) |> matching?() ->
+        true
+
+      true ->
+        false
     end
   end
 
-  defp match_single_level?(subsc_list, topic_list) do
-    cond do
-      subsc_list == topic_list -> true
-      subsc_list |> length != topic_list |> length -> false
-      true -> false
+  defp matching?(del: ["#"], ins: _), do: true
+  defp matching?(eq: _, del: ["#"], ins: _), do: true
+  defp matching?(eq: _, del: ["#"]), do: false
+  defp matching?(eq: _, del: _), do: false
+
+  defp matching_by_level?(subsc_list, topic_list) do
+    if subsc_list |> length == topic_list |> length do
+      Enum.zip(subsc_list, topic_list)
+      |> Enum.reduce(true, fn {s, t}, acc ->
+        acc &&
+          if s == "#" do
+            true
+          else
+            s == t || s == "+"
+          end
+      end)
+    else
+      false
     end
   end
 end
