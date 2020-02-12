@@ -8,7 +8,7 @@ defmodule PubSub.Server do
   def handle_call({:join_topic, topic, pid}, _from, state) do
     if is_valid_topic?(topic) do
       new_list =
-        case subscribers(state, topic) do
+        case subscribers(topic, state) do
           [] -> [pid]
           l -> [pid | l] |> Enum.dedup()
         end
@@ -20,7 +20,7 @@ defmodule PubSub.Server do
   end
 
   def handle_call({:list_subscribers, topic}, _from, state) do
-    {:reply, subscribers(state, topic), state}
+    {:reply, subscribers_to_topic(topic, state), state}
   end
 
   def handle_cast({:broadcast, topic, msg}, state) do
@@ -42,7 +42,7 @@ defmodule PubSub.Server do
 
   def broadcast(topic, msg), do: GenServer.cast(__MODULE__, {:broadcast, topic, msg})
 
-  defp subscribers(state, topic) do
+  defp subscribers(topic, state) do
     case state |> Map.get(topic) do
       nil -> []
       l -> l
@@ -65,7 +65,7 @@ defmodule PubSub.Server do
     end)
   end
 
-  defp topic_match?(subscription, topic) do
+  def topic_match?(subscription, topic) do
     ["" | subscription_list] = subscription |> String.split("/")
     ["" | topic_list] = topic |> String.split("/")
 
@@ -91,18 +91,14 @@ defmodule PubSub.Server do
   defp matching?(_any), do: false
 
   defp matching_levels?(subsc_list, topic_list) do
-    if subsc_list |> length == topic_list |> length do
-      Enum.zip(subsc_list, topic_list)
-      |> Enum.reduce(true, fn {s, t}, acc ->
-        acc &&
-          if s == "#" do
-            true
-          else
-            s == t || s == "+"
-          end
-      end)
-    else
-      false
-    end
+    Enum.zip(subsc_list, topic_list)
+    |> Enum.reduce(true, fn {s, t}, acc ->
+      acc &&
+        if s == "#" do
+          true
+        else
+          s == t || s == "+"
+        end
+    end)
   end
 end
